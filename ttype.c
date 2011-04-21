@@ -62,14 +62,14 @@ char *nth(int n, node *list) {
  * char 'c' interposed between them
  */
 char *intercalate(char c, int total_len, int numwords, char **words) {
-	int msglen = total_len + numwords;      /* words + spaces + null */
+	int msglen = total_len + numwords;      /* words + 'c's + null */
 	int i = 0, wi = 0, j;
 	char *msg = malloc(msglen); 
 	for (j = 0; j < msglen-1; j++) {
 		if (words[wi][i] == '\0') {
 			wi++;
 			i = 0;
-			msg[j] = ' ';           /* space between words */
+			msg[j] = c;             /* 'c's between words */
 		}
 		else {
 			msg[j] = words[wi][i]; 
@@ -81,11 +81,9 @@ char *intercalate(char c, int total_len, int numwords, char **words) {
 }
 
 int main(int argc, char **argv) {
-
 	FILE *f;
-	if (argc > 1) {
+	if (argc > 1)
 		f = fopen(*++argv, "r");
-	}
 	else
 		f = fopen("/usr/share/dict/words", "r");
 	size_t n = 0;
@@ -114,5 +112,7 @@ int main(int argc, char **argv) {
 	char *msg = intercalate(' ', total_len, NUMWORDS, words);
 	printf("[%s]\n", msg);
 	
+	/* TODO add curses interface */
+
 	return 0;
 }

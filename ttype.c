@@ -1,9 +1,11 @@
+#include <ncurses.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 static const int NUMWORDS = 10;
+static const int NUMREPS  = 3;
 
 struct node_ {
 	char *item;
@@ -18,6 +20,18 @@ int cons(char *str, int n, node **list) {
 	strcpy(new->item, str);
 	new->next = *list;
 	*list = new;
+	return 1;
+}
+
+int freelist(node *list) {
+	node *curr = list;
+	node *tmp;
+	while (curr != NULL) {
+		tmp = curr->next;
+		free(curr->item);
+		free(curr);
+		curr = tmp;
+	}
 	return 1;
 }
 
@@ -92,6 +106,7 @@ int main(int argc, char **argv) {
 	node *list = NULL;
 	int count = 0;
 
+	/* collect candidate words from the dictionary */
 	while ((numread = getline(&line, &n, f)) > 0) {
 		line[numread-1] = '\0';
 		if (allfrom("abcdefgh", line) && numread > 3) {
@@ -100,7 +115,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	
-	/* choose several random words */
+	/* choose NUMWORDS at random from candidates */
 	srandom((unsigned int)time(NULL));
 	char *words[NUMWORDS]; 
 	int j, total_len = 0;
@@ -110,9 +125,69 @@ int main(int argc, char **argv) {
 	}
 	
 	char *msg = intercalate(' ', total_len, NUMWORDS, words);
-	printf("[%s]\n", msg);
+	freelist(list);
+	int msglen = strlen(msg);
 	
-	/* TODO add curses interface */
+	/* now set up some numbers used for metrics */
+	int total_msglen = NUMREPS * msglen;
+	int num_words = total_len * NUMREPS / 5;           /* def. of WPM */
+	int miss = 0;
+	int num_keystrokes = 0;
+	int start; 
+	int end;
+	int secs;
+	int curr_reps = 0;
+	int curr_char = 0;
+	int ch;
+	float wpm;
+	float kspc;
+
+	/* set up the curses interface */
+	initscr();
+	raw();
+	keypad(stdscr, TRUE);
+	noecho();
+
+	/* show the message and start the clock */
+	attron(A_BOLD);
+	printw(msg);
+	attroff(A_BOLD);
+	printw("\n");
+	start = time(NULL);
+	for (curr_reps = 0; curr_reps < NUMREPS; curr_reps++) {
+		while (curr_char < msglen) {
+			ch = getch();
+			if (ch == msg[curr_char]) {
+				addch(ch);
+				curr_char++;
+			}
+			else {
+				miss++;
+			}
+			refresh();
+			num_keystrokes++;
+		}
+		curr_char = 0;
+		printw("\n");
+	}
+	end = time(NULL);
+	
+	/* calculate metrics */
+	secs = end - start;
+	wpm = 1.0 * num_words / (secs / 60.0);
+	kspc = 1.0 * num_keystrokes / total_msglen;
+
+	/* report */
+	printw("\n");
+	attron(A_REVERSE | A_BOLD);
+	printw("SUCCESS! (press any key to quit)\n");
+	attroff(A_REVERSE | A_BOLD);
+	printw("Elapsed: %d s\n", secs);
+	printw("Words/min: %f\n", wpm);
+	printw("Misses: %d\n", miss);
+	printw("Keystrokes/char: %f\n", kspc);
+	getch();
+	endwin();
 
 	return 0;
 }

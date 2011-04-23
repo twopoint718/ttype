@@ -14,9 +14,9 @@ struct node_ {
 
 typedef struct node_ node;
 
-int cons(char *str, int n, node **list) {
+int cons(char *str, node **list) {
 	node *new = malloc(sizeof(node));
-	new->item = malloc(n);
+	new->item = malloc(strlen(str)+1);
 	strcpy(new->item, str);
 	new->next = *list;
 	*list = new;
@@ -111,9 +111,11 @@ int main(int argc, char **argv) {
 		line[numread-1] = '\0';
 		if (allfrom("abcdefgh", line) && numread > 3) {
 			count++;
-			cons(line, numread-1, &list);
+			cons(line, &list);
 		}
 	}
+	free(line);
+	fclose(f);
 	
 	/* choose NUMWORDS at random from candidates */
 	srandom((unsigned int)time(NULL));
@@ -187,7 +189,9 @@ int main(int argc, char **argv) {
 	printw("Misses: %d\n", miss);
 	printw("Keystrokes/char: %f\n", kspc);
 	getch();
-	endwin();
 
+	/* cleanup */
+	free(msg);
+	endwin();
 	return 0;
 }

@@ -4,6 +4,9 @@
 #include <string.h>
 #include <time.h>
 
+#define CTRL(x) (x&037)
+#define CEOF CTRL('d')
+
 static const int NUMWORDS = 10;
 static const int NUMREPS  = 3;
 
@@ -72,21 +75,27 @@ char *nth(int n, node *list) {
 	return NULL;
 }
 
+int exit_cleanly() {
+	echo();
+	keypad(stdscr, 0);
+	endwin();
+	exit(EXIT_SUCCESS);
+}
 /* return a string that is produced by concatenating 'words' together with
  * char 'c' interposed between them
  */
 char *intercalate(char c, int total_len, int numwords, char **words) {
-	int msglen = total_len + numwords;      /* words + 'c's + null */
+	int msglen = total_len + numwords;	  /* words + 'c's + null */
 	int i = 0, wi = 0, j;
-	char *msg = malloc(msglen); 
+	char *msg = malloc(msglen);
 	for (j = 0; j < msglen-1; j++) {
 		if (words[wi][i] == '\0') {
 			wi++;
 			i = 0;
-			msg[j] = c;             /* 'c's between words */
+			msg[j] = c;			 /* 'c's between words */
 		}
 		else {
-			msg[j] = words[wi][i]; 
+			msg[j] = words[wi][i];
 			i++;
 		}
 	}
@@ -116,26 +125,26 @@ int main(int argc, char **argv) {
 	}
 	free(line);
 	fclose(f);
-	
+
 	/* choose NUMWORDS at random from candidates */
 	srandom((unsigned int)time(NULL));
-	char *words[NUMWORDS]; 
+	char *words[NUMWORDS];
 	int j, total_len = 0;
 	for (j = 0; j < NUMWORDS; j++) {
 		words[j] = nth(random()%count, list);
 		total_len += strlen(words[j]);
 	}
-	
+
 	char *msg = intercalate(' ', total_len, NUMWORDS, words);
 	freelist(list);
 	int msglen = strlen(msg);
-	
+
 	/* now set up some numbers used for metrics */
 	int total_msglen = NUMREPS * msglen;
-	int num_words = total_len * NUMREPS / 5;           /* def. of WPM */
+	int num_words = total_len * NUMREPS / 5;		   /* def. of WPM */
 	int miss = 0;
 	int num_keystrokes = 0;
-	int start; 
+	int start;
 	int end;
 	int secs;
 	int curr_reps = 0;
@@ -159,7 +168,10 @@ int main(int argc, char **argv) {
 	for (curr_reps = 0; curr_reps < NUMREPS; curr_reps++) {
 		while (curr_char < msglen) {
 			ch = getch();
-			if (ch == msg[curr_char]) {
+			if (ch == CTRL('d') || ch == CTRL('c')) {
+				printw("Exiting\n");
+				exit_cleanly();
+			} else if (ch == msg[curr_char]) {
 				addch(ch);
 				curr_char++;
 			}
@@ -173,7 +185,7 @@ int main(int argc, char **argv) {
 		printw("\n");
 	}
 	end = time(NULL);
-	
+
 	/* calculate metrics */
 	secs = end - start;
 	wpm = 1.0 * num_words / (secs / 60.0);
@@ -192,6 +204,5 @@ int main(int argc, char **argv) {
 
 	/* cleanup */
 	free(msg);
-	endwin();
-	return 0;
+	exit_cleanly();
 }
